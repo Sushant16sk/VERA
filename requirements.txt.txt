@@ -1,0 +1,11 @@
+Flask
+speechrecognition
+gtts
+requests
+Pillow
+sumy
+transformers
+pvporcupine
+pyaudio
+torch
+torchvision

@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice Assistant</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        body, html {
+            height: 100%;
+            margin: 0;
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: linear-gradient(135deg, #f5f7fa, #c3cfe2);
+        }
+        #container {
+            text-align: center;
+            padding: 20px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        #mic-button {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            border: none;
+            background: #e0edff;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            font-size: 40px;
+            color: #5b5b5b;
+            cursor: pointer;
+            transition: background 0.3s ease;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        #mic-button:hover {
+            background: #c3cfe2;
+        }
+        #listening {
+            display: none;
+            margin-top: 10px;
+        }
+        #listening .pulse {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background-color: red;
+            animation: pulse 1s infinite;
+        }
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+                opacity: 1;
+            }
+            50% {
+                transform: scale(1.5);
+                opacity: 0.5;
+            }
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+        #transcript {
+            margin-top: 20px;
+            font-size: 18px;
+        }
+        #text-input-container {
+            display: none;
+            margin-top: 20px;
+        }
+        #text-input {
+            width: 100%;
+            padding: 10px;
+            font-size: 16px;
+        }
+        #submit-button {
+            margin-top: 10px;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            background: #e0edff;
+            border: none;
+            border-radius: 5px;
+            transition: background 0.3s ease;
+        }
+        #submit-button:hover {
+            background: #c3cfe2;
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <h1>Voice Assistant VERA</h1>
+        <button id="mic-button"><i class="fas fa-microphone"></i></button>
+        <p id="transcript"></p>
+        <div id="listening">
+            <div class="pulse"></div>
+        </div>
+        <div id="text-input-container">
+            <textarea id="text-input" rows="4" placeholder="Type the text you want me to read..."></textarea><br>
+            <button id="submit-button">Submit</button>
+        </div>
+    </div>
+
+    <script>
+        const micButton = document.getElementById("mic-button");
+        const transcriptElement = document.getElementById("transcript");
+        const listeningElement = document.getElementById("listening");
+        const textInputContainer = document.getElementById("text-input-container");
+        const textInput = document.getElementById("text-input");
+        const submitButton = document.getElementById("submit-button");
+
+        micButton.addEventListener("click", () => {
+            listeningElement.style.display = "block";
+            const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+            recognition.lang = 'en-US';
+            recognition.start();
+            
+            recognition.onresult = (event) => {
+                const transcript = event.results[0][0].transcript;
+                transcriptElement.textContent = "You: " + transcript;
+                listeningElement.style.display = "none";
+                
+                if (transcript.toLowerCase().includes("read this")) {
+                    textInputContainer.style.display = "block";
+                } else {
+                    fetch("/voice-command", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify({ command: transcript })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        const responseText = data.response;
+                        transcriptElement.textContent += "\nAssistant: " + responseText;
+                    });
+                }
+            };
+
+            recognition.onerror = (event) => {
+                console.error(event.error);
+                listeningElement.style.display = "none";
+            };
+        });
+
+        submitButton.addEventListener("click", () => {
+            const textToRead = textInput.value;
+            if (textToRead) {
+                fetch("/voice-command", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({ command: "read this text", text: textToRead })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    const responseText = data.response;
+                    transcriptElement.textContent += "\nAssistant: " + responseText;
+                });
+                textInputContainer.style.display = "none";
+                textInput.value = "";
+            }
+        });
+    </script>
+</body>
+</html>
